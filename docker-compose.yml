@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  ai-chatbots:
+    build: .
+    container_name: ai-chatbots
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    volumes:
+      # Persist WhatsApp session data
+      - ./data:/app/data
+      # Persist logs
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Required for WhatsApp Web.js Puppeteer
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+
+  # Optional: Redis for production session storage
+  redis:
+    image: redis:7-alpine
+    container_name: ai-chatbots-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    profiles:
+      - with-redis
+
+volumes:
+  redis-data:
